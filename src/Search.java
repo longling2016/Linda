@@ -148,4 +148,22 @@ public class Search {
             System.out.println(e);
         }
     }
+
+    public void sync(String content, String filePath) {
+        try {
+            content = content.substring(1, content.length() - 1);
+            String[] tuples = content.split("\\)\\(");
+            FileWriter fw = new FileWriter(filePath);
+            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter out = new PrintWriter(bw);
+            for (String each : tuples) {
+                out.println(each);
+            }
+            out.close();
+            bw.close();
+            fw.close();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
 }

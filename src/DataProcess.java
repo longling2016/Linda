@@ -1,6 +1,11 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 
 /**
  * Created by longlingwang on 4/8/17.
@@ -136,6 +141,49 @@ public class DataProcess {
             return -1;
         }
     }
+
+    public String getBackup (String filePath) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/backup.txt"));
+            String line = br.readLine();
+            while ((line = br.readLine()) != null) {
+                sb.append("(" + line + ")");
+            }
+            br.close();
+            return sb.toString();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        return null;
+    }
+
+    public String getOriginal (String filePath) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/original.txt"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append("(" + line + ")");
+            }
+            br.close();
+            return sb.toString();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        return null;
+    }
+
+    public void emptyFile (String filePath) {
+        try {
+            PrintWriter writer = new PrintWriter(filePath);
+            writer.print("");
+            writer.close();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
 
 //    public void updateSlotTable (String tuples, Slot[] slotTable) {
 //        String[] tupleList = tuples.substring(1, tuples.length() - 1).split("\\)\\(");

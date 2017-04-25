@@ -77,9 +77,10 @@ public class HostManager {
         File netFile = new File(filePath + "nets.txt");
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(netFile));
-            out.write(localName);
             for (Address each: addressBook) {
-                out.write("\n" + each.hostName + ", " + each.ip + ", " + each.port);
+                if (!each.hostName.equals(localName)) {
+                    out.write("\n" + each.hostName + ", " + each.ip + ", " + each.port);
+                }
             }
             out.close();
         } catch (IOException e) {

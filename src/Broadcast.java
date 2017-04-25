@@ -7,11 +7,11 @@ import java.util.Map;
  * Created by longlingwang on 4/8/17.
  */
 public class Broadcast {
-    public void broadcast (String message, ArrayList<Address> addressBook) {
+    public void broadcast (String message, ArrayList<Address> addressBook, String localHost) {
 
         for (int i = 0; i < addressBook.size(); i++) {
             Address cur = addressBook.get(i);
-            if (!cur.ifAlive) {
+            if (!cur.ifAlive || cur.hostName.equals(localHost)) {
                 continue;
             }
             try {
@@ -28,7 +28,8 @@ public class Broadcast {
         }
     }
 
-    public void rebootCast (String message, String filePath, String localHost) {
+    public boolean rebootCast (String message, String filePath) {
+        boolean ifSent = false;
         try {
             BufferedReader br = new BufferedReader(new FileReader(filePath + "nets.txt"));
             String line = br.readLine();
@@ -44,6 +45,7 @@ public class Broadcast {
                     out.flush();
                     out.close();
                     s.close();
+                    ifSent = true;
                     break;
                 } catch (IOException e) {
                     // current host may have been deleted. Continue trying next host.
@@ -54,6 +56,7 @@ public class Broadcast {
         } catch (IOException e) {
             System.out.println(e);
         }
+        return ifSent;
     }
 
 }
