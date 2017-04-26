@@ -51,18 +51,12 @@ public class HostManager {
         return true;
     }
 
-    public void requireAddressBook (String hostList, String localIP, int localPort) {
-
-        hostList = hostList.replaceAll("\\s+", "");
-
-        // parse the list of hosts
-        String[] hosts = hostList.split("\\)");
+    public void requireAddressBook (String[] hostList, String localIP, int localPort) {
 
         MessageSender ms = new MessageSender();
 
-        for (String each : hosts) {
-            String host = each.substring(1, each.length());
-            String[] hostInfor = host.split(",");
+        for (String each : hostList) {
+            String[] hostInfor = each.split(",");
 
             String ip = hostInfor[1];
             String port = hostInfor[2];

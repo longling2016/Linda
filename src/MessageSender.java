@@ -9,7 +9,11 @@ import java.util.List;
 public class MessageSender {
     public void simpleSend (String message, String hostName, List<Address> addressBook) { // does NOT forward message when receiver is down
 
+        System.out.println(hostName);
+
         int i = searchIndex(hostName, addressBook);
+
+        System.out.println(i);
 
         if (!addressBook.get(i).ifAlive) {
             return;

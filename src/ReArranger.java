@@ -1,3 +1,5 @@
+import com.sun.tools.corba.se.idl.InterfaceGen;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -110,105 +112,156 @@ public class ReArranger {
             s.removeTuple(tuplesToTans,filePath + "tuples/original.txt");
 
             //delete the tuple from backup
-            Address backup = curAddressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
-            if (backup.ifAlive) {
-                ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
-            }
+//            Address backup = curAddressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
+//            if (backup.ifAlive) {
+//                ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
+//            }
 
         }
 
     }
 
-    public void reArrangeRea(String filePath, Integer totalSlot, String localHost,
-                             Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
-        // get the backup host name
 
-        String backupName = "";
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/backup.txt"));
-            backupName = br.readLine();
-            br.close();
-        } catch (IOException e) {
-            System.out.println(e);
+    public void reArrangeOB(String filePath, String localHost, Slot[] pre, Slot[] cur, List<Address> addressBook) {
+
+        HashMap<String, ArrayList<Integer>> map = new HashMap<>();
+        MessageSender ms = new MessageSender();
+        Search s = new Search();
+
+        for (int i = 0; i < cur.length; i ++) {
+            if (!pre[i].hostBelong.equals(localHost) || !pre[i].tupleSaved) {
+                continue;
+            }
+            String curNewName = cur[i].hostBelong;
+            if (map.containsKey(curNewName)) {
+                map.get(curNewName).add(i);
+            } else {
+                ArrayList<Integer> list = new ArrayList<>();
+                list.add(i);
+                map.put(curNewName, list);
+            }
         }
 
-        if (backupName.equals("")) { // backup file is empty
+        if (map.isEmpty()) {
             return;
         }
 
-        int pre = preAddressBook.size();
-        int cur = curAddressBook.size();
-        MessageSender ms = new MessageSender();
-        Search s = new Search();
-        ArrayList<Address> difference = new ArrayList<>();
-        for (Address a: curAddressBook) {
-            for (Address old: preAddressBook) {
-                if (a.equals(old)) {
-                    break;
-                }
-            }
-            difference.add(a);
-        }
+        for (String eachNew: map.keySet()) {
 
-        int givePerNew = (totalSlot / pre - totalSlot / cur) / difference.size();
-
-        for (Address newAdd: difference) {
-            HashSet<Integer> slotToTans = new HashSet<>();
-            HashSet<Integer> backupToTans = new HashSet<>();
-            HashMap<String, Integer> counter = new HashMap<>();
-            for (Address each: preAddressBook) {
-                counter.put(each.hostName, givePerNew);
-            }
-            int i = 0;
-            while (!ifEmpty(counter)) {
-                String curName = slotTable[i].hostBelong;
-                if (!counter.containsKey(curName)) {
-                    i ++;
-                    continue;
-                }
-                int n = counter.get(curName);
-                if (n > 0) {
-                    slotTable[i].hostBelong = newAdd.hostName;
-                    n --;
-                    counter.put(curName, n);
-                }
-                if (curName.equals(localHost) && slotTable[i].tupleSaved) {
-                    slotToTans.add(i);
-                }
-
-                if (curName.equals(backupName) && slotTable[i].tupleSaved) {
-                    backupToTans.add(i);
-                }
-                i ++;
-            }
+            HashSet<Integer> slotToTans = new HashSet<>(map.get(eachNew));
 
             // send the tuples in slotToTans to new host and the back up
-            String tuplesToTans =  getTuples(slotToTans,filePath + "tuples/original.txt");
+            String tuplesToTans = getTuples(slotToTans, filePath + "tuples/original.txt");
 
-            // send the tuples in backupToTans to new host
-            String backupTuplesToTans =  getTuples(slotToTans,filePath + "tuples/backup.txt");
+            // send to original
+            ms.simpleSend("orisav" + tuplesToTans, eachNew, addressBook);
 
-            // if new host is alive (it should be alive), send to original
-            ms.directSend("orisav" + tuplesToTans, newAdd.ip, newAdd.port);
-            ms.directSend("orisav" + backupTuplesToTans, newAdd.ip, newAdd.port);
-
-            // if backup of new added is on, send backup
-            Address curNewBackup = curAddressBook.get((ms.searchIndex(newAdd.hostName, curAddressBook) + 1) % cur);
-            ms.simpleSend("bacsav" + newAdd.hostName + "::" + tuplesToTans, curNewBackup.hostName, curAddressBook);
-            ms.simpleSend("bacsav" + newAdd.hostName + "::" + backupTuplesToTans, curNewBackup.hostName, curAddressBook);
+            // send backup
+            int curB = (ms.searchIndex(eachNew, addressBook) + 1) % addressBook.size();
+                ms.simpleSend("bacsav" + eachNew + "::" + tuplesToTans, addressBook.get(curB).hostName, addressBook);
 
             // delete the tuple from local
-            s.removeTuple(tuplesToTans,filePath + "tuples/original.txt");
+            s.removeTuple(tuplesToTans, filePath + "tuples/original.txt");
 
-            // delete the tuple from backup
-            s.removeTuple(backupTuplesToTans,filePath + "tuples/backup.txt");
-
-            //delete the tuple from backup host of local host
-            Address backup = curAddressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
-            ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
+            //delete the tuple from backup
+//            Address backup = addressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
+//            if (backup.ifAlive) {
+//                ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
+//            }
         }
 
     }
+
+//    public void reArrangeRea(String filePath, Integer totalSlot, String localHost,
+//                             Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
+//        // get the backup host name
+//
+//        String backupName = "";
+//        try {
+//            BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/backup.txt"));
+//            backupName = br.readLine();
+//            br.close();
+//        } catch (IOException e) {
+//            System.out.println(e);
+//        }
+//
+//        if (backupName.equals("")) { // backup file is empty
+//            return;
+//        }
+//
+//        int pre = preAddressBook.size();
+//        int cur = curAddressBook.size();
+//        MessageSender ms = new MessageSender();
+//        Search s = new Search();
+//        ArrayList<Address> difference = new ArrayList<>();
+//        for (Address a: curAddressBook) {
+//            for (Address old: preAddressBook) {
+//                if (a.equals(old)) {
+//                    break;
+//                }
+//            }
+//            difference.add(a);
+//        }
+//
+//        int givePerNew = (totalSlot / pre - totalSlot / cur) / difference.size();
+//
+//        for (Address newAdd: difference) {
+//            HashSet<Integer> slotToTans = new HashSet<>();
+//            HashSet<Integer> backupToTans = new HashSet<>();
+//            HashMap<String, Integer> counter = new HashMap<>();
+//            for (Address each: preAddressBook) {
+//                counter.put(each.hostName, givePerNew);
+//            }
+//            int i = 0;
+//            while (!ifEmpty(counter)) {
+//                String curName = slotTable[i].hostBelong;
+//                if (!counter.containsKey(curName)) {
+//                    i ++;
+//                    continue;
+//                }
+//                int n = counter.get(curName);
+//                if (n > 0) {
+//                    slotTable[i].hostBelong = newAdd.hostName;
+//                    n --;
+//                    counter.put(curName, n);
+//                }
+//                if (curName.equals(localHost) && slotTable[i].tupleSaved) {
+//                    slotToTans.add(i);
+//                }
+//
+//                if (curName.equals(backupName) && slotTable[i].tupleSaved) {
+//                    backupToTans.add(i);
+//                }
+//                i ++;
+//            }
+//
+//            // send the tuples in slotToTans to new host and the back up
+//            String tuplesToTans =  getTuples(slotToTans,filePath + "tuples/original.txt");
+//
+//            // send the tuples in backupToTans to new host
+//            String backupTuplesToTans =  getTuples(slotToTans,filePath + "tuples/backup.txt");
+//
+//            // if new host is alive (it should be alive), send to original
+//            ms.directSend("orisav" + tuplesToTans, newAdd.ip, newAdd.port);
+//            ms.directSend("orisav" + backupTuplesToTans, newAdd.ip, newAdd.port);
+//
+//            // if backup of new added is on, send backup
+//            Address curNewBackup = curAddressBook.get((ms.searchIndex(newAdd.hostName, curAddressBook) + 1) % cur);
+//            ms.simpleSend("bacsav" + newAdd.hostName + "::" + tuplesToTans, curNewBackup.hostName, curAddressBook);
+//            ms.simpleSend("bacsav" + newAdd.hostName + "::" + backupTuplesToTans, curNewBackup.hostName, curAddressBook);
+//
+//            // delete the tuple from local
+//            s.removeTuple(tuplesToTans,filePath + "tuples/original.txt");
+//
+//            // delete the tuple from backup
+//            s.removeTuple(backupTuplesToTans,filePath + "tuples/backup.txt");
+//
+//            //delete the tuple from backup host of local host
+//            Address backup = curAddressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
+//            ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
+//        }
+//
+//    }
 
     public void reArrangeDelete (String filePath, String localHost, Slot[] slotTable, HashSet<String> deletedList, List<Address> addressBook) {
         // update address book

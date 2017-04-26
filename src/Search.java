@@ -152,6 +152,37 @@ public class Search {
         }
     }
 
+    public void flushBackup(String content, String filePath) {
+        try {
+            String[] infor = content.split("::");
+            System.out.println(content);
+
+            String backupForWho = infor[0];
+            FileWriter fw = new FileWriter(filePath);
+            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter out = new PrintWriter(bw);
+            out.println(backupForWho);
+            if (infor.length == 1) {
+                out.close();
+                bw.close();
+                fw.close();
+                return;
+            }
+            String tuples = infor[1];
+            tuples = tuples.substring(1, tuples.length() - 1);
+            String[] tupleList = tuples.split("\\)\\(");
+
+            for (String each : tupleList) {
+                out.println(each);
+            }
+            out.close();
+            bw.close();
+            fw.close();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
     public void sync(String content, String filePath) {
         try {
             content = content.substring(1, content.length() - 1);
