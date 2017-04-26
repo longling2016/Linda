@@ -1,13 +1,14 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Created by longlingwang on 4/8/17.
  */
 public class Broadcast {
-    public void broadcast (String message, ArrayList<Address> addressBook, String localHost) {
+    public void broadcast (String message, List<Address> addressBook, String localHost) {
 
         for (int i = 0; i < addressBook.size(); i++) {
             Address cur = addressBook.get(i);
@@ -32,7 +33,7 @@ public class Broadcast {
         boolean ifSent = false;
         try {
             BufferedReader br = new BufferedReader(new FileReader(filePath + "nets.txt"));
-            String line = br.readLine();
+            String line;
 
             while ((line = br.readLine()) != null) {
                 String[] curline = line.split("\\s*,\\s*");

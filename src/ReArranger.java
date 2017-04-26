@@ -3,13 +3,14 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * Created by longlingwang on 4/19/17.
  */
 public class ReArranger {
     public void reArrangeAdd(String filePath, Integer totalSlot, String localHost,
-                             Slot[] slotTable, ArrayList<Address> preAddressBook, ArrayList<Address> curAddressBook) {
+                             Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
         int pre = preAddressBook.size();
         int cur = curAddressBook.size();
         MessageSender ms = new MessageSender();
@@ -35,6 +36,10 @@ public class ReArranger {
             int i = 0;
             while (!ifEmpty(counter)) {
                 String curName = slotTable[i].hostBelong;
+                if (!counter.containsKey(curName)) {
+                    i ++;
+                    continue;
+                }
                 int n = counter.get(curName);
                 if (n > 0) {
                     slotTable[i].hostBelong = newAdd.hostName;
@@ -45,6 +50,10 @@ public class ReArranger {
                     slotToTans.add(i);
                 }
                 i ++;
+            }
+
+            if (slotToTans.isEmpty()) {
+                continue;
             }
 
             // send the tuples in slotToTans to new host and the back up
@@ -73,7 +82,7 @@ public class ReArranger {
     }
 
     public void reArrangeRea(String filePath, Integer totalSlot, String localHost,
-                             Slot[] slotTable, ArrayList<Address> preAddressBook, ArrayList<Address> curAddressBook) {
+                             Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
         // get the backup host name
 
         String backupName = "";
@@ -159,7 +168,7 @@ public class ReArranger {
 
     }
 
-    public void reArrangeDelete (String filePath, String localHost, Slot[] slotTable, HashSet<String> deletedList, ArrayList<Address> addressBook) {
+    public void reArrangeDelete (String filePath, String localHost, Slot[] slotTable, HashSet<String> deletedList, List<Address> addressBook) {
         // update address book
         for (Address cur: addressBook) {
             if (deletedList.contains(cur.hostName)) {
@@ -252,7 +261,7 @@ public class ReArranger {
 
     public boolean ifEmpty(HashMap<String, Integer> hm) {
         for (Integer each: hm.values()) {
-            if (each != 0) {
+            if (each > 0) {
                 return false;
             }
         }

@@ -12,15 +12,15 @@ public class P2 {
     static int port;
     static String hostName;
     static String filePath;
-    static ArrayList<Address> addressBook;
+    static List <Address> addressBook;
     static ArrayList<Address> oldBackupAddressBook;
     static Boolean lock = false;
     static String aws;
     static String awsName;
     static int needACK;
     static String errorMessage;
-    static Slot[] slotTable = new Slot[65536];
-    static Integer totalSlot = 65536;
+    static Slot[] slotTable = new Slot[12];
+    static Integer totalSlot = 12;
     static boolean ifReboot;
 
 
@@ -43,7 +43,7 @@ public class P2 {
             port = serverSocket.getLocalPort();
             System.out.println(ip + " at port number: " + port);
 
-            addressBook = new ArrayList<>();
+            addressBook = Collections.synchronizedList(new ArrayList<>());
 
             Thread thread = new Thread(new ListeningThread(serverSocket));
             thread.start();
@@ -148,9 +148,34 @@ public class P2 {
                         nets.createNewFile();
                         tuplesO.createNewFile();
                         tuplesB.createNewFile();
-                        Runtime.getRuntime().exec("chmod 777 /tmp/lwang3");
-                        Runtime.getRuntime().exec("chmod 777 /tmp/lwang3/linda");
-                        Runtime.getRuntime().exec("chmod 777 /tmp/lwang3/linda/" + hostName);
+                        File f1 = new File("/tmp/lwang3");
+                        f1.setExecutable(true, false);
+                        f1.setReadable(true, false);
+                        f1.setWritable(true, false);
+                        File f2 = new File("/tmp/lwang3/linda");
+                        f2.setExecutable(true, false);
+                        f2.setReadable(true, false);
+                        f2.setWritable(true, false);
+                        File f3 = new File("/tmp/lwang3/linda/" + hostName);
+                        f3.setExecutable(true, false);
+                        f3.setReadable(true, false);
+                        f3.setWritable(true, false);
+                        File f4 = new File("/tmp/lwang3/linda/" + hostName + "/tuples");
+                        f4.setExecutable(true, false);
+                        f4.setReadable(true, false);
+                        f4.setWritable(true, false);
+                        File f5 = new File("/tmp/lwang3/linda/" + hostName + "/nets.txt");
+                        f5.setExecutable(false, false);
+                        f5.setReadable(true, false);
+                        f5.setWritable(true, false);
+                        File f6 = new File("/tmp/lwang3/linda/" + hostName + "/tuples/original.txt");
+                        f6.setExecutable(false, false);
+                        f6.setReadable(true, false);
+                        f6.setWritable(true, false);
+                        File f7 = new File("/tmp/lwang3/linda/" + hostName + "/tuples/backup.txt");
+                        f7.setExecutable(false, false);
+                        f7.setReadable(true, false);
+                        f7.setWritable(true, false);
                         Runtime.getRuntime().exec("chmod 666 /tmp/lwang3/linda/" + hostName + "/nets.txt");
                         Runtime.getRuntime().exec("chmod 777 /tmp/lwang3/linda/" + hostName + "/tuples");
                         Runtime.getRuntime().exec("chmod 666 /tmp/lwang3/linda/" + hostName + "/tuples/original.txt");
@@ -249,7 +274,7 @@ public class P2 {
             // save the address book to disk net file
             hm.flushHostNet(addressBook, filePath, hostName);
 
-            StringBuilder sb = new StringBuilder("(" + hostName + " " + ip + " " + port + " true)");
+            StringBuilder sb = new StringBuilder();
             for (Address each: addressBook) {
                 sb.append("(" + each.hostName + " " + each.ip + " " + each.port + " " + each.ifAlive + ")");
             }
@@ -493,7 +518,7 @@ public class P2 {
             bc.broadcast("sl1" + hostToPut, addressBook, hostName);
             if (whoHas.equals(hostName)) {
                 System.out.println("put tuple (" + content + ") on " + hostName);
-                search.addNewTuple("(" + content + ")", filePath);
+                search.addNewTuple("(" + content + ")", filePath + "tuples/original.txt");
             } else {
                 ms.send("out " + content, whoHas, addressBook);
                 System.out.println("put tuple (" + content + ") on " + whoHas);
@@ -659,7 +684,7 @@ public class P2 {
 
         } else if (message.substring(0, 3).equals("req")) { // received a message asking for address book
             String[] content = message.split("\\s+");
-            StringBuilder sb = new StringBuilder("add(" + hostName + " " + ip + " " + port + " true)");
+            StringBuilder sb = new StringBuilder("add");
             for (Address each: addressBook) {
                 sb.append("(" + each.hostName + " " + each.ip + " " + each.port + " " + each.ifAlive + ")");
             }
@@ -691,6 +716,7 @@ public class P2 {
                 }
             }
 
+            ArrayList<Address> tmp = new ArrayList<>();
             for (String each: hostList) {
 
                 each = each.substring(1, each.length());
@@ -705,11 +731,12 @@ public class P2 {
                     if (address.hostName.equals(curName) && address.ip.equals(curIP) && address.port == curPort) {
                         continue;
                     } else {
-                        addressBook.add(new Address(curName, curIP, curPort, ifAlive));
-                        addingList.add(curName + " " + curIP + " " + infor[1]);
+                        tmp.add(new Address(curName, curIP, curPort, ifAlive));
+                        addingList.add(curName + " " + curIP + " " + curPort);
                     }
                 }
             }
+            addressBook.addAll(tmp);
 
             hm.flushHostNet(addressBook, filePath, hostName);
             System.out.println("Following hosts have been successfully added!");
@@ -770,7 +797,7 @@ public class P2 {
             } else if (message.substring(0, 3).equals("sav")) { // save the tuple to original
                 String content = message.substring(4, message.length());
                 search.addNewTuple(content, accessFile);
-                System.out.println("Reallocated tuples in format of (slot#-> " + content + ") in local " + accessFile + " due to deleting/adding host.");
+                System.out.println("Save tuples in format of (slot#-> " + content + ") in " + accessFile);
 
             } else {
                 System.out.println("Received a unpredicted message: " + message);

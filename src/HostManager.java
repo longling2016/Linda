@@ -2,10 +2,7 @@ import com.sun.org.apache.xml.internal.utils.Hashtree2Node;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by longlingwang on 4/6/17.
@@ -43,7 +40,7 @@ public class HostManager {
         return hosts.length;
     }
 
-    public boolean ifDuplicated (ArrayList<Address> list, HashSet<String> nameSet) {
+    public boolean ifDuplicated (List<Address> list, HashSet<String> nameSet) {
         for (Address each: list) {
             if (nameSet.contains(each.hostName)) {
                 return false;
@@ -73,13 +70,13 @@ public class HostManager {
         }
     }
 
-    public void flushHostNet(ArrayList<Address> addressBook, String filePath, String localName) {
+    public void flushHostNet(List<Address> addressBook, String filePath, String localName) {
         File netFile = new File(filePath + "nets.txt");
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(netFile));
             for (Address each: addressBook) {
                 if (!each.hostName.equals(localName)) {
-                    out.write("\n" + each.hostName + ", " + each.ip + ", " + each.port);
+                    out.write(each.hostName + ", " + each.ip + ", " + each.port + "\n");
                 }
             }
             out.close();
@@ -88,7 +85,7 @@ public class HostManager {
         }
     }
 
-    public void deletehosts (String filePath, String localHost, HashSet<String> deletedList, Slot[] slotTable, ArrayList<Address> addressBook) {
+    public void deletehosts (String filePath, String localHost, HashSet<String> deletedList, Slot[] slotTable, List<Address> addressBook) {
         // update address book
         for (Address cur: addressBook) {
             if (deletedList.contains(cur.hostName)) {

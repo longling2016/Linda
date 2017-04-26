@@ -1,12 +1,13 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by longlingwang on 4/8/17.
  */
 public class MessageSender {
-    public void simpleSend (String message, String hostName, ArrayList<Address> addressBook) { // does NOT forward message when receiver is down
+    public void simpleSend (String message, String hostName, List<Address> addressBook) { // does NOT forward message when receiver is down
 
         int i = searchIndex(hostName, addressBook);
 
@@ -43,7 +44,7 @@ public class MessageSender {
         }
     }
 
-    public void send (String message, String sendToWho, ArrayList<Address> addressBook) { // forward message when receiver is down
+    public void send (String message, String sendToWho, List<Address> addressBook) { // forward message when receiver is down
 
         int i = searchIndex(sendToWho, addressBook);
         if (addressBook.get(i).ifAlive) { // receiver is alive
@@ -70,7 +71,7 @@ public class MessageSender {
         }
     }
 
-    public int searchIndex(String hostName, ArrayList<Address> list) {
+    public int searchIndex(String hostName, List<Address> list) {
         for (int i = 0; i < list.size(); i ++) {
             if (list.get(i).hostName.equals(hostName)) {
                 return i;
