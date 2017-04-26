@@ -85,6 +85,17 @@ public class HostManager {
         }
     }
 
+    public void initBackup(String filePath, String localName) {
+        File netFile = new File(filePath + "tuples/backup.txt");
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(netFile));
+            out.write(localName + "\n");
+            out.close();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
     public void deletehosts (String filePath, String localHost, HashSet<String> deletedList, Slot[] slotTable, List<Address> addressBook) {
         // update address book
         for (Address cur: addressBook) {

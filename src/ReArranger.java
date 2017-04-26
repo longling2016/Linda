@@ -11,23 +11,47 @@ import java.util.List;
 public class ReArranger {
     public void reArrangeAdd(String filePath, Integer totalSlot, String localHost,
                              Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
+
+        // TODO remove
+        for (Address each: preAddressBook) {
+            System.out.println("pre: " + each.hostName);
+        }
+        // TODO END
+
+
+        // TODO remove
+        for (Address each: curAddressBook) {
+            System.out.println("cur: " + each.hostName);
+        }
+        // TODO END
+
+
         int pre = preAddressBook.size();
         int cur = curAddressBook.size();
         MessageSender ms = new MessageSender();
         Search s = new Search();
         ArrayList<Address> difference = new ArrayList<>();
+
         for (Address a: curAddressBook) {
+            boolean have = false;
             for (Address old: preAddressBook) {
-                if (a.equals(old)) {
+                if (a.hostName.equals(old.hostName)) {
+                    have = true;
                     break;
                 }
             }
-            difference.add(a);
+            if (!have) {
+                difference.add(a);
+            }
         }
 
+        System.out.println(totalSlot);
         int givePerNew = (totalSlot / pre - totalSlot / cur) / difference.size();
+        System.out.println("givePerNew: " + givePerNew);
 
         for (Address newAdd: difference) {
+            System.out.println(difference.size());
+
             HashSet<Integer> slotToTans = new HashSet<>();
             HashMap<String, Integer> counter = new HashMap<>();
             for (Address each: preAddressBook) {
@@ -35,6 +59,7 @@ public class ReArranger {
             }
             int i = 0;
             while (!ifEmpty(counter)) {
+                System.out.println(slotTable[i].hostBelong + ": " + slotTable[i].tupleSaved);
                 String curName = slotTable[i].hostBelong;
                 if (!counter.containsKey(curName)) {
                     i ++;
@@ -51,6 +76,19 @@ public class ReArranger {
                 }
                 i ++;
             }
+
+            System.out.println("\n\n\n");
+
+            // TODO remove
+            for (Slot each: slotTable) {
+                System.out.println(each.hostBelong + ": " + each.tupleSaved);
+            }
+            // TODO END
+            System.out.println("\n\n\n");
+
+            System.out.println(slotToTans.size());
+
+
 
             if (slotToTans.isEmpty()) {
                 continue;
@@ -124,6 +162,10 @@ public class ReArranger {
             int i = 0;
             while (!ifEmpty(counter)) {
                 String curName = slotTable[i].hostBelong;
+                if (!counter.containsKey(curName)) {
+                    i ++;
+                    continue;
+                }
                 int n = counter.get(curName);
                 if (n > 0) {
                     slotTable[i].hostBelong = newAdd.hostName;

@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 
 /**
@@ -12,8 +13,13 @@ public class Search {
             BufferedReader br = new BufferedReader(new FileReader(filePath));
             DataProcess dp = new DataProcess();
             String line;
+            String[] pre;
             while ((line = br.readLine()) != null) {
-                String[] curline = line.split("\\s*,\\s*");
+                pre = line.split("->");
+                if (pre.length < 2) {
+                    continue;
+                }
+                String[] curline = pre[1].split("\\s*,\\s*");
                 if (tuple.length != curline.length) {
                     continue;
                 }
@@ -71,11 +77,8 @@ public class Search {
         String folder = inputFile.getParent();
         File tempFile = new File(folder + "/tempFile.txt");
         tuple = tuple.substring(1, tuple.length() - 1);
-        String[] tupleList = tuple.split("\\)\\(");
         ArrayList<String> removeList = new ArrayList<>();
-        for (String each : tupleList) {
-           removeList.add(each);
-        }
+        removeList.addAll(Arrays.asList(tuple.split("\\)\\(")));
 
         try {
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));

@@ -1,4 +1,5 @@
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,9 @@ public class Broadcast {
                 String ip = curline[1];
                 int port = Integer.parseInt(curline[2]);
                 try {
-                    Socket s = new Socket(ip, port);
+
+                    Socket s =new Socket();
+                    s.connect(new InetSocketAddress( ip, port),500);
                     DataOutputStream out = new DataOutputStream(s.getOutputStream());
                     out.writeUTF(message);
                     out.flush();
