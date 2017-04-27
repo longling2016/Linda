@@ -92,9 +92,12 @@ public class HostManager {
 
     public void deletehosts (String filePath, String localHost, HashSet<String> deletedList, Slot[] slotTable, List<Address> addressBook) {
         // update address book
-        for (Address cur: addressBook) {
-            if (deletedList.contains(cur.hostName)) {
-                addressBook.remove(cur);
+        MessageSender ms = new MessageSender();
+
+        for (String cur: deletedList) {
+            int i = ms.searchIndex(cur, addressBook);
+            if (i != -1) {
+                addressBook.remove(i);
             }
         }
 

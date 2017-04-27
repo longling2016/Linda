@@ -73,6 +73,7 @@ public class Search {
     }
 
     public void removeTuple(String tuple, String filePath) {
+        System.out.println("remove tuple: " + tuple);
         File inputFile = new File(filePath);
         String folder = inputFile.getParent();
         File tempFile = new File(folder + "/tempFile.txt");

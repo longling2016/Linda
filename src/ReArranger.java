@@ -11,21 +11,18 @@ import java.util.List;
  * Created by longlingwang on 4/19/17.
  */
 public class ReArranger {
-    public void reArrangeAdd(String filePath, Integer totalSlot, String localHost,
-                             Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
+    public void reArrangeAdd(String filePath, Integer totalSlot, String localHost, Slot[] preTable,
+                             Slot[] curTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
 
-        // TODO remove
-        for (Address each: preAddressBook) {
-            System.out.println("pre: " + each.hostName);
-        }
-        // TODO END
-
-
-        // TODO remove
-        for (Address each: curAddressBook) {
-            System.out.println("cur: " + each.hostName);
-        }
-        // TODO END
+//        // TODO delete
+//        for (Slot each: preTable) {
+//            System.out.println( "pre (" + each.hostBelong + ", " + each.tupleSaved + ")");
+//        }
+//
+//        // TODO delete
+//        for (Slot each: curTable) {
+//            System.out.println( "cur (" + each.hostBelong + ", " + each.tupleSaved + ")");
+//        }
 
 
         int pre = preAddressBook.size();
@@ -47,98 +44,44 @@ public class ReArranger {
             }
         }
 
-        System.out.println(totalSlot);
         int givePerNew = (totalSlot / pre - totalSlot / cur) / difference.size();
-        System.out.println("givePerNew: " + givePerNew);
+        System.out.println("give per new: " + givePerNew);
 
-        for (Address newAdd: difference) {
-            System.out.println(difference.size());
+        System.out.println("difference #: " + difference.size());
 
-            HashSet<Integer> slotToTans = new HashSet<>();
-            HashMap<String, Integer> counter = new HashMap<>();
+        for (Address differ: difference) {
+
+            HashMap<String, Integer> checkList = new HashMap<>();
+
             for (Address each: preAddressBook) {
-                counter.put(each.hostName, givePerNew);
+                checkList.put(each.hostName, givePerNew);
             }
-            int i = 0;
-            while (!ifEmpty(counter)) {
-                System.out.println(slotTable[i].hostBelong + ": " + slotTable[i].tupleSaved);
-                String curName = slotTable[i].hostBelong;
-                if (!counter.containsKey(curName)) {
-                    i ++;
+
+            for (Slot slot: curTable) {
+                String curName = slot.hostBelong;
+                if (!checkList.containsKey(curName) || checkList.get(curName) == 0) {
                     continue;
                 }
-                int n = counter.get(curName);
-                if (n > 0) {
-                    slotTable[i].hostBelong = newAdd.hostName;
-                    n --;
-                    counter.put(curName, n);
-                }
-                if (curName.equals(localHost) && slotTable[i].tupleSaved) {
-                    slotToTans.add(i);
-                }
-                i ++;
+                slot.hostBelong = differ.hostName;
+                int n = checkList.get(curName) - 1;
+                checkList.put(curName, n);
             }
-
-            System.out.println("\n\n\n");
-
-            // TODO remove
-            for (Slot each: slotTable) {
-                System.out.println(each.hostBelong + ": " + each.tupleSaved);
-            }
-            // TODO END
-            System.out.println("\n\n\n");
-
-            System.out.println(slotToTans.size());
-
-
-
-            if (slotToTans.isEmpty()) {
-                continue;
-            }
-
-            // send the tuples in slotToTans to new host and the back up
-            String tuplesToTans =  getTuples(slotToTans,filePath + "tuples/original.txt");
-
-            // if new host is alive (it should be alive), send to original
-            ms.directSend("orisav" + tuplesToTans, newAdd.ip, newAdd.port);
-
-            // if backup of new added is on, send backup
-            Address curNewBackup = curAddressBook.get((ms.searchIndex(newAdd.hostName, curAddressBook) + 1) % cur);
-            if (curNewBackup.ifAlive) {
-                ms.simpleSend("bacsav" + newAdd.hostName + "::" + tuplesToTans, curNewBackup.hostName, curAddressBook);
-            }
-
-            // delete the tuple from local
-            s.removeTuple(tuplesToTans,filePath + "tuples/original.txt");
-
-            //delete the tuple from backup
-//            Address backup = curAddressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
-//            if (backup.ifAlive) {
-//                ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
-//            }
 
         }
 
-    }
-
-
-    public void reArrangeOB(String filePath, String localHost, Slot[] pre, Slot[] cur, List<Address> addressBook) {
-
         HashMap<String, ArrayList<Integer>> map = new HashMap<>();
-        MessageSender ms = new MessageSender();
-        Search s = new Search();
 
-        for (int i = 0; i < cur.length; i ++) {
-            if (!pre[i].hostBelong.equals(localHost) || !pre[i].tupleSaved) {
-                continue;
-            }
-            String curNewName = cur[i].hostBelong;
-            if (map.containsKey(curNewName)) {
-                map.get(curNewName).add(i);
-            } else {
-                ArrayList<Integer> list = new ArrayList<>();
-                list.add(i);
-                map.put(curNewName, list);
+        for (int j = 0; j < preTable.length; j ++) {
+            if (preTable[j].hostBelong.equals(localHost) && !curTable[j].hostBelong.equals(localHost) && preTable[j].tupleSaved) {
+
+                String curNewName = curTable[j].hostBelong;
+                if (map.containsKey(curNewName)) {
+                    map.get(curNewName).add(j);
+                } else {
+                    ArrayList<Integer> list = new ArrayList<>();
+                    list.add(j);
+                    map.put(curNewName, list);
+                }
             }
         }
 
@@ -153,121 +96,85 @@ public class ReArranger {
             // send the tuples in slotToTans to new host and the back up
             String tuplesToTans = getTuples(slotToTans, filePath + "tuples/original.txt");
 
-            // send to original
-            ms.simpleSend("orisav" + tuplesToTans, eachNew, addressBook);
 
-            // send backup
-            int curB = (ms.searchIndex(eachNew, addressBook) + 1) % addressBook.size();
-                ms.simpleSend("bacsav" + eachNew + "::" + tuplesToTans, addressBook.get(curB).hostName, addressBook);
+            if (slotToTans.isEmpty()) {
+                continue;
+            }
+
+            System.out.println("tuples to give away: " + tuplesToTans);
+
+            // send to original
+            ms.simpleSend("orisav" + tuplesToTans, eachNew, curAddressBook);
 
             // delete the tuple from local
             s.removeTuple(tuplesToTans, filePath + "tuples/original.txt");
 
-            //delete the tuple from backup
-//            Address backup = addressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
-//            if (backup.ifAlive) {
-//                ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
-//            }
+        }
+
+        // TODO delete
+        for (Slot each: curTable) {
+            System.out.println( "(" + each.hostBelong + ", " + each.tupleSaved + ")");
         }
 
     }
 
-//    public void reArrangeRea(String filePath, Integer totalSlot, String localHost,
-//                             Slot[] slotTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
-//        // get the backup host name
-//
-//        String backupName = "";
-//        try {
-//            BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/backup.txt"));
-//            backupName = br.readLine();
-//            br.close();
-//        } catch (IOException e) {
-//            System.out.println(e);
-//        }
-//
-//        if (backupName.equals("")) { // backup file is empty
-//            return;
-//        }
-//
-//        int pre = preAddressBook.size();
-//        int cur = curAddressBook.size();
-//        MessageSender ms = new MessageSender();
-//        Search s = new Search();
-//        ArrayList<Address> difference = new ArrayList<>();
-//        for (Address a: curAddressBook) {
-//            for (Address old: preAddressBook) {
-//                if (a.equals(old)) {
-//                    break;
-//                }
-//            }
-//            difference.add(a);
-//        }
-//
-//        int givePerNew = (totalSlot / pre - totalSlot / cur) / difference.size();
-//
-//        for (Address newAdd: difference) {
-//            HashSet<Integer> slotToTans = new HashSet<>();
-//            HashSet<Integer> backupToTans = new HashSet<>();
-//            HashMap<String, Integer> counter = new HashMap<>();
-//            for (Address each: preAddressBook) {
-//                counter.put(each.hostName, givePerNew);
-//            }
-//            int i = 0;
-//            while (!ifEmpty(counter)) {
-//                String curName = slotTable[i].hostBelong;
-//                if (!counter.containsKey(curName)) {
-//                    i ++;
-//                    continue;
-//                }
-//                int n = counter.get(curName);
-//                if (n > 0) {
-//                    slotTable[i].hostBelong = newAdd.hostName;
-//                    n --;
-//                    counter.put(curName, n);
-//                }
-//                if (curName.equals(localHost) && slotTable[i].tupleSaved) {
-//                    slotToTans.add(i);
-//                }
-//
-//                if (curName.equals(backupName) && slotTable[i].tupleSaved) {
-//                    backupToTans.add(i);
-//                }
-//                i ++;
-//            }
-//
-//            // send the tuples in slotToTans to new host and the back up
-//            String tuplesToTans =  getTuples(slotToTans,filePath + "tuples/original.txt");
-//
-//            // send the tuples in backupToTans to new host
-//            String backupTuplesToTans =  getTuples(slotToTans,filePath + "tuples/backup.txt");
-//
-//            // if new host is alive (it should be alive), send to original
-//            ms.directSend("orisav" + tuplesToTans, newAdd.ip, newAdd.port);
-//            ms.directSend("orisav" + backupTuplesToTans, newAdd.ip, newAdd.port);
-//
-//            // if backup of new added is on, send backup
-//            Address curNewBackup = curAddressBook.get((ms.searchIndex(newAdd.hostName, curAddressBook) + 1) % cur);
-//            ms.simpleSend("bacsav" + newAdd.hostName + "::" + tuplesToTans, curNewBackup.hostName, curAddressBook);
-//            ms.simpleSend("bacsav" + newAdd.hostName + "::" + backupTuplesToTans, curNewBackup.hostName, curAddressBook);
-//
-//            // delete the tuple from local
-//            s.removeTuple(tuplesToTans,filePath + "tuples/original.txt");
-//
-//            // delete the tuple from backup
-//            s.removeTuple(backupTuplesToTans,filePath + "tuples/backup.txt");
-//
-//            //delete the tuple from backup host of local host
-//            Address backup = curAddressBook.get((ms.searchIndex(localHost, curAddressBook) + 1) % cur);
-//            ms.simpleSend("bacdel " + tuplesToTans, backup.hostName, curAddressBook);
-//        }
-//
-//    }
+
+    public void reArrangeOB(String filePath, String localHost, Slot[] pre, Slot[] cur, List<Address> addressBook) {
+
+        HashMap<String, ArrayList<Integer>> map = new HashMap<>();
+        MessageSender ms = new MessageSender();
+        Search s = new Search();
+
+        for (int i = 0; i < pre.length; i ++) {
+            if (pre[i].hostBelong.equals(localHost) && !cur[i].hostBelong.equals(localHost) && pre[i].tupleSaved) {
+
+                String curNewName = cur[i].hostBelong;
+                if (map.containsKey(curNewName)) {
+                    map.get(curNewName).add(i);
+                } else {
+                    ArrayList<Integer> list = new ArrayList<>();
+                    list.add(i);
+                    map.put(curNewName, list);
+                }
+            }
+        }
+
+        if (map.isEmpty()) {
+            return;
+        }
+
+        for (String eachNew: map.keySet()) {
+
+            HashSet<Integer> slotToTans = new HashSet<>(map.get(eachNew));
+
+            String tuplesToTans = getTuples(slotToTans, filePath + "tuples/original.txt");
+
+            System.out.println(eachNew);
+
+            // send to original
+            ms.simpleSend("orisav" + tuplesToTans, eachNew, addressBook);
+
+            // delete the tuple from local
+            s.removeTuple(tuplesToTans, filePath + "tuples/original.txt");
+
+        }
+
+        // TODO delete
+        for (Slot each: cur) {
+            System.out.println( "OB (" + each.hostBelong + ", " + each.tupleSaved + ")");
+        }
+
+    }
+
 
     public void reArrangeDelete (String filePath, String localHost, Slot[] slotTable, HashSet<String> deletedList, List<Address> addressBook) {
         // update address book
-        for (Address cur: addressBook) {
-            if (deletedList.contains(cur.hostName)) {
-                addressBook.remove(cur);
+        MessageSender ms = new MessageSender();
+
+        for (String cur: deletedList) {
+            int i = ms.searchIndex(cur, addressBook);
+            if (i != -1) {
+                addressBook.remove(i);
             }
         }
 
@@ -285,8 +192,6 @@ public class ReArranger {
                 i = (i + 1) % total;
             }
         }
-
-        MessageSender ms = new MessageSender();
 
         for (int each = 0; each < addressBook.size(); each ++) {
 
@@ -337,11 +242,13 @@ public class ReArranger {
             BufferedReader br = new BufferedReader(new FileReader(filePath));
             String line;
             while ((line = br.readLine()) != null) {
+                System.out.println("curline: " + line);
                 String[] curline = line.split("->");
                 if (curline.length < 2) {
                     continue;
                 }
                 int curSlot = Integer.parseInt(curline[0]);
+                System.out.println("cur slot = " + curSlot);
                 if (slotToTans.contains(curSlot)) {
                     sb.append("(" + line + ")");
                 }

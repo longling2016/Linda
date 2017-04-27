@@ -305,6 +305,15 @@ public class P2 {
             bc.broadcast("add" + sb.toString(), addressBook, hostName);
 
 
+            // backup the old slot table
+            Slot[] oldSlotTable = new Slot[totalSlot];
+
+            for (int i = 0; i < slotTable.length; i ++) {
+                Slot cur = new Slot(slotTable[i].hostBelong, slotTable[i].tupleSaved);
+                oldSlotTable[i] = cur;
+            }
+
+
             // sync the slot table with the new added hosts
             for (String eachHost: newHosts) {
                 String[] infor = eachHost.split(",");
@@ -322,28 +331,11 @@ public class P2 {
             System.out.println("received all slot table");
 
 
-            // check if any host is not alive, then re-arrange the backup tuple file
-//            int hostDown = -2;
-//            boolean ifDown = false;
-//
-//            for (int i = 0; i < addressBook.size(); i ++) {
-//                if (!addressBook.get(i).ifAlive) {
-//                    ifDown = true;
-//                    hostDown = i;
-//                    break;
-//                }
-//            }
-//
-//            if (ifDown) { // there is a host is down when adding new hosts, the backup host needs to do re-arrange for this down host
-//                Address rearrange = addressBook.get((hostDown + 1) % addressBook.size());
-//                ms.simpleSend("rea" + sb.toString(), rearrange.hostName, addressBook);
-//            }
-
 
             // sort address book and re-arrange
             addressBook.sort(Address::compareTo);
 
-            new ReArranger().reArrangeAdd(filePath, totalSlot, hostName, slotTable, oldBackupAddressBook, addressBook);
+            new ReArranger().reArrangeAdd(filePath, totalSlot, hostName, oldSlotTable, slotTable, oldBackupAddressBook, addressBook);
 
             // broadcast to sync slot table
             StringBuilder st;
@@ -355,10 +347,18 @@ public class P2 {
 
             System.out.println("Local original tuples have be relocated!");
 
+            try {
+                Thread.currentThread().sleep(3000);
+            } catch (InterruptedException e) {
+                System.out.println(e);
+            }
+
             // backup local tuples
             String tuples = dp.getOriginal(filePath);
+            System.out.println(tuples);
+
             Address backup = addressBook.get((ms.searchIndex(hostName, addressBook) + 1) % addressBook.size());
-            ms.simpleSend("fla " + hostName + "::" + tuples, backup.hostName, addressBook);
+            ms.simpleSend("fla" + hostName + "::" + tuples, backup.hostName, addressBook);
 
             // broadcast for others to backup
             bc.broadcast("baa", addressBook, hostName);
@@ -366,12 +366,13 @@ public class P2 {
             System.out.println("Local original tuples have be backed up!");
 
         } else if (command.substring(0, 3).equals("del")) {
-            command = command.replace("\\s+", "");
+            command = command.replace(" ", "");
             if (command.length() < 8) {
                 System.out.println("Invalid User Input!");
                 return;
             }
             String hostList = command.substring(6, command.length());
+            System.out.println(hostList);
             if (hostList.charAt(0) != '(' || hostList.charAt(hostList.length() - 1) != ')') {
                 System.out.println("Invalid User Input! Please add \"()\" for host list to delete." +
                         "Example: delete (<host name 1>, <host name 2>, ...)");
@@ -395,7 +396,7 @@ public class P2 {
             boolean self = false;
             for (String each: list) {
                 if (ms.searchIndex(each, addressBook) == -1) {
-                    System.out.println("Host name " + each + "is not in net file! Please re-enter...");
+                    System.out.println("Host name " + each + " is not in net file! Please re-enter...");
                     return;
                 }
                 if (each.equals(hostName)) {
@@ -583,7 +584,7 @@ public class P2 {
 
             // send to backup to add this tuple as well
             int backup = (ms.searchIndex(whoHas, addressBook) + 1) % addressBook.size();
-            ms.simpleSend("bacsav (" + hostToPut + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
+            ms.simpleSend("bacsav(" + hostToPut + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
 
         } else {
             System.out.println("Invalid Command! Re-enter...");
@@ -607,7 +608,7 @@ public class P2 {
         } else if (message.substring(0, 3).equals("baa")) { // send tuples for backup
             String tuples = dp.getOriginal(filePath);
             Address backup = addressBook.get((ms.searchIndex(hostName, addressBook) + 1) % addressBook.size());
-            ms.simpleSend("fla " + hostName + "::" + tuples, backup.hostName, addressBook);
+            ms.simpleSend("fla" + hostName + "::" + tuples, backup.hostName, addressBook);
 
         } else if (message.substring(0, 3).equals("onn")) { // sender is back alive now
             String hostName = message.substring(3, message.length());
@@ -639,7 +640,7 @@ public class P2 {
             lock = false;
             System.out.println("The backup tuples in current host have been synced!");
 
-        } else if (message.substring(0, 3).equals("adb")) {
+        } else if (message.substring(0, 3).equals("adb")) { // receive the address book from others, check if contain self
 
             String content = message.substring(3, message.length());
             String[] hostList = content.split("\\)");
@@ -678,7 +679,7 @@ public class P2 {
             }
 
 
-        } else if (message.substring(0, 3).equals("stb")) {
+        } else if (message.substring(0, 3).equals("stb")) {  // sync the slot table after rebooted
 
             String content = message.substring(3, message.length());
             String[] slots = content.split("\\)");
@@ -695,7 +696,7 @@ public class P2 {
             lock  = false;
             System.out.println("Tuple slots have been synced!");
 
-        } else if (message.substring(0, 3).equals("stc")) {
+        } else if (message.substring(0, 3).equals("stc")) { // sync the slot table with received ones
             needACK --;
 
             String content = message.substring(3, message.length());
@@ -733,7 +734,7 @@ public class P2 {
 
             ms.simpleSend(st.toString(), message.substring(3, message.length()), addressBook);
 
-        } else if (message.substring(0, 3).equals("sl0")) { // update the slot table
+        } else if (message.substring(0, 3).equals("sl0")) { // update the slot table with certain slot
             int index = Integer.parseInt(message.substring(3, message.length()));
             slotTable[index].tupleSaved = false;
 
@@ -782,12 +783,12 @@ public class P2 {
                 ms.directSend("ack", infor[2], Integer.parseInt(infor[3]));
             }
 
-        }  else if (message.substring(0, 3).equals("aws")) {
+        }  else if (message.substring(0, 3).equals("aws")) { // get the tuple I am waiting for
             awsName = message.split("\\s+")[1];
             aws = message.substring(5 + awsName.length(), message.length());
             lock = false;
 
-        } else if (message.substring(0, 3).equals("add") || message.substring(0, 3).equals("res")) {
+        } else if (message.substring(0, 3).equals("add") || message.substring(0, 3).equals("res")) { // add some new hosts
             System.out.println(message);
             if (message.substring(0, 3).equals("res")) {
                 needACK --;
@@ -826,22 +827,10 @@ public class P2 {
             System.out.println("Following hosts have been successfully added!");
             System.out.println(addingList.toString());
 
-//            if (message.substring(0, 3).equals("res")) {
-//                return; // skip re-arrange
-//            }
 
             // sort new address book
             addressBook.sort(Address::compareTo);
 
-            // if the message is "add" host, then re-arrange the original file TODO!!!!!!!!!!!!!!!!
-//            if (message.substring(0, 3).equals("add")) {
-//                new ReArranger().reArrangeAdd(filePath, totalSlot, hostName, slotTable, oldBackupAddressBook, addressBook);
-//            }
-
-            // if the message is "rea"rrange, then re-arrange the original file and the backup file for down host as well
-//            if (message.substring(0, 3).equals("rea")) {
-//                new ReArranger().reArrangeRea(filePath, totalSlot, hostName, slotTable, oldBackupAddressBook, addressBook);
-//            }
 
 
         } else if (message.substring(0, 3).equals("syt")) { // sync the slot table and relocate tuples
@@ -857,7 +846,7 @@ public class P2 {
 
             for (int i = 0; i < slotTable.length; i ++) {
                 String each = slots[i];
-                String[] infor = each.substring(1, each.length()).split("\\s+");
+                String[] infor = each.substring(0, each.length()).split("\\s+");
                 boolean ifSaved = Boolean.parseBoolean(infor[1]);
                 slotTable[i].hostBelong = infor[0];
                 slotTable[i].tupleSaved = ifSaved;
@@ -874,11 +863,11 @@ public class P2 {
             System.out.println("Save tuples " + content + " in local backup due to deleting/adding host.");
 
         } else if (message.substring(0, 3).equals("fla")) { // save the tuple to backup by overwriting all
-            String content = message.substring(4, message.length());
+            String content = message.substring(3, message.length());
             search.flushBackup(content, filePath + "tuples/backup.txt");
             System.out.println("Save tuples " + content + " in local backup due to deleting/adding host.");
 
-        } else if (message.substring(0, 3).equals("ori") || message.substring(0, 3).equals("bac")) {
+        } else if (message.substring(0, 3).equals("ori") || message.substring(0, 3).equals("bac")) {  // detect if operation on original or backup
 
             String accessFile;
             if (message.substring(0, 3).equals("ori")) {
@@ -909,8 +898,9 @@ public class P2 {
                 search.addNewTuple("(" + content + ")", accessFile);
                 System.out.println("Save tuple (" + content.substring(1, content.length() - 1).split("->")[1] + ") in local.");
 
-            } else if (message.substring(0, 3).equals("sav")) { // save the tuple to original
-                String content = message.substring(4, message.length());
+            } else if (message.substring(0, 3).equals("sav")) { // save the tuple to backup / original file
+                System.out.println(message);
+                String content = message.substring(3, message.length());
                 search.addNewTuple(content, accessFile);
                 System.out.println("Save tuple (" + content.substring(1, content.length() - 1).split("->")[1] + ") in " + accessFile);
 
