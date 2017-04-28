@@ -1,6 +1,7 @@
 import com.sun.org.apache.xml.internal.utils.Hashtree2Node;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.*;
 
@@ -11,12 +12,13 @@ public class HostManager {
 
     public int checkNewHost (String hostList, String localIP, int localPort) {
 
-        hostList = hostList.replaceAll("\\s+", "");
+        hostList = hostList.replaceAll(" ", "");
 
         // parse the list of hosts
         String[] hosts = hostList.split("\\)");
 
         for (String each : hosts) {
+            System.out.println(each);
             String host = each.substring(1, each.length());
             String[] hostInfor = host.split(",");
 
@@ -26,17 +28,22 @@ public class HostManager {
 
             try {
                 //try to connect to check the correctness of IP and port
-                Socket s = new Socket(ip, Integer.parseInt(port));
+                System.out.println("send to: " + ip + ", " + port);
+                Socket s =new Socket();
+                s.connect(new InetSocketAddress( ip, Integer.parseInt(port)),500);
                 DataOutputStream out = new DataOutputStream(s.getOutputStream());
                 out.writeUTF("confirm " + hostName + " " + localIP + " " + localPort);
+                System.out.println("Message sent!" + hostName);
                 out.flush();
                 out.close();
                 s.close();
             } catch (IOException e) {
-                System.out.println("Unreachable host for " + hostName + " at " + ip + ": " + port);
+                System.out.println("Unreachable host for " + hostName + " at " + ip + ": " + port +"! Please enter again.");
                 return -1;
             }
+
         }
+        System.out.println("# of new host: " + hosts.length);
         return hosts.length;
     }
 

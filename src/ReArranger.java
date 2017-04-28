@@ -175,12 +175,19 @@ public class ReArranger {
             int i = ms.searchIndex(cur, addressBook);
             if (i != -1) {
                 addressBook.remove(i);
+            } else {
+                System.out.println(cur + " is not one of the hosts in current distributed system.");
+                return;
             }
         }
 
-        ArrayList<HashSet<Integer>> sets = new ArrayList<>(addressBook.size());
+        ArrayList<HashSet<Integer>> sets = new ArrayList<>();
         int i = 0;
         int total = addressBook.size();
+
+        for (Address eachCur: addressBook) {
+           sets.add(new HashSet<>());
+        }
 
         // update slot table and save the slot id for different hosts
         for (int index = 0; index < slotTable.length; index ++) {
@@ -193,6 +200,7 @@ public class ReArranger {
             }
         }
 
+
         for (int each = 0; each < addressBook.size(); each ++) {
 
             Address receiver = addressBook.get(each);
@@ -201,12 +209,15 @@ public class ReArranger {
             // send the tuples in deleted host to others and others' back up
             String tuplesToTans =  getTuples(slotToTans,filePath + "tuples/original.txt");
 
-            // send to original
-            ms.simpleSend("orisav" + tuplesToTans, receiver.hostName, addressBook);
+            if (!slotToTans.isEmpty()) {
+                // send to original
+                ms.simpleSend("orisav" + tuplesToTans, receiver.hostName, addressBook);
+            }
 
             // send to backup
             Address curBackup = addressBook.get((each + 1) % addressBook.size());
             ms.simpleSend("bacsav" + receiver.hostName + "::" + tuplesToTans, curBackup.hostName, addressBook);
+            System.out.println("give tuples for receiver's backup host: " + curBackup.hostName + " :: " + tuplesToTans);
 
         }
 
@@ -226,8 +237,12 @@ public class ReArranger {
         } catch (IOException e) {
             System.out.println(e);
         }
+        System.out.println(backupWho);
+
+        System.out.println("delete list: " + deletedList.toString());
 
         if (!deletedList.contains(backupWho)) {
+            System.out.println(backupWho);
             int newBackup = (ms.searchIndex(backupWho, addressBook) + 1) % addressBook.size();
             ms.simpleSend("bacsav" + backupWho + "::" + sb.toString(), addressBook.get(newBackup).hostName, addressBook);
         }

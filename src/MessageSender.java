@@ -9,7 +9,7 @@ import java.util.List;
 public class MessageSender {
     public void simpleSend (String message, String hostName, List<Address> addressBook) { // does NOT forward message when receiver is down
 
-        System.out.println(hostName);
+        System.out.println("simple send: " + hostName);
 
         int i = searchIndex(hostName, addressBook);
 
@@ -23,12 +23,14 @@ public class MessageSender {
             Socket s = new Socket(addressBook.get(i).ip, addressBook.get(i).port);
             DataOutputStream out = new DataOutputStream(s.getOutputStream());
             out.writeUTF(message);
+            System.out.println("socket sent!");
             out.flush();
             out.close();
             s.close();
+            System.out.println("socket closed!");
         } catch (IOException e) {
             addressBook.get(i).ifAlive = false;
-            System.out.println("Host " + hostName + "is down for now.");
+            System.out.println("Host " + hostName + " is down for now.");
         }
     }
 
@@ -68,7 +70,7 @@ public class MessageSender {
 
         } catch (IOException e) {
             addressBook.get(i).ifAlive = false;
-            System.out.println("Host " + sendToWho + "is down for now. \nForward the message to its backup.");
+            System.out.println("Host " + sendToWho + " is down for now. \nForward the message to its backup.");
             message = message.replace("ori", "bup");
             i = (i + 1) % addressBook.size();
             simpleSend(message, addressBook.get(i).hostName, addressBook);

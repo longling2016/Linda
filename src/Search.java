@@ -125,21 +125,40 @@ public class Search {
     public void flush(String content, String filePath) {
         try {
             String[] infor = content.split("::");
+            System.out.println(content);
             String backupForWho = infor[0];
-            String tuples = infor[1];
 
             BufferedReader br = new BufferedReader(new FileReader(filePath));
             String line = br.readLine();
             br.close();
 
+            System.out.println("cur backup host: " + line);
+            System.out.println("new backup host: " + backupForWho);
+
             FileWriter fw;
+            boolean flush = false;
             if (line.equals(backupForWho)) {
                 fw = new FileWriter(filePath, true);
+                System.out.println("append");
             } else {
                 fw = new FileWriter(filePath);
+                System.out.println("flush");
+                flush = true;
             }
             BufferedWriter bw = new BufferedWriter(fw);
             PrintWriter out = new PrintWriter(bw);
+            if (flush) {
+                out.println(backupForWho);
+            }
+            if (infor.length < 2) {
+                out.close();
+                bw.close();
+                fw.close();
+                return;
+            }
+
+            String tuples = infor[1];
+
             tuples = tuples.substring(1, tuples.length() - 1);
             String[] tupleList = tuples.split("\\)\\(");
             for (String each : tupleList) {

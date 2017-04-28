@@ -1,6 +1,4 @@
 
-import com.sun.org.apache.xml.internal.dtm.DTMAxisIterator;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.*;
@@ -34,6 +32,11 @@ public class P2 {
         //get the host name from user input
         hostName = args[0];
 
+        // initialize the slot table
+        for (int i = 0; i < slotTable.length; i++) {
+            slotTable[i] = new Slot(hostName);
+        }
+
         // get the IP and available port
         try {
             ip = InetAddress.getLocalHost().getHostAddress();
@@ -64,7 +67,7 @@ public class P2 {
 
             System.out.println("1");
 
-            if (net.exists() && bc.rebootCast("reb" + hostName, filePath)) {  // net file exists
+            if (net.exists() && bc.rebootCast("reb" + hostName + ":" + port, filePath)) {  // net file exists
                 System.out.println("Detecting if current host is re-booting...");
 
                 System.out.println("2");
@@ -73,7 +76,7 @@ public class P2 {
                 lock = true;
                 while (lock) {
                     try {
-                        Thread.currentThread().sleep(2000);
+                        Thread.currentThread().sleep(1000);
                     } catch (InterruptedException e) {
                         System.out.println(e);
                     }
@@ -81,6 +84,9 @@ public class P2 {
 
                 if (ifReboot) { // current host is rebooted
                     System.out.println("Current host is rebooted!");
+
+                    // broadcast others
+                    bc.broadcast("onn" + hostName + ":" + port, addressBook, hostName);
 
                     // sync for slot table
                     lock = true;
@@ -95,6 +101,7 @@ public class P2 {
 
 
                     // sync with backup host
+                    System.out.println("syncing with backup host...");
                     int backup = (ms.searchIndex(hostName, addressBook) + 1) % addressBook.size();
                     ms.simpleSend("syo" + hostName, addressBook.get(backup).hostName, addressBook);
 
@@ -120,8 +127,6 @@ public class P2 {
                         }
                     }
 
-                    // broadcast others
-                    bc.broadcast("onn" + hostName, addressBook, hostName);
                     System.out.println("Rebooting is done!");
 
 
@@ -136,10 +141,6 @@ public class P2 {
 
             } else { // net file DOES NOT exist. Current host is newly created.
                 System.out.println("3");
-
-                for (int i = 0; i < slotTable.length; i++) {
-                    slotTable[i] = new Slot(hostName);
-                }
 
                 //create the net file and tuple file first
                 filePath = "/tmp/lwang3/linda/" + hostName + "/";
@@ -183,10 +184,6 @@ public class P2 {
                     f7.setExecutable(false, false);
                     f7.setReadable(true, false);
                     f7.setWritable(true, false);
-                    Runtime.getRuntime().exec("chmod 666 /tmp/lwang3/linda/" + hostName + "/nets.txt");
-                    Runtime.getRuntime().exec("chmod 777 /tmp/lwang3/linda/" + hostName + "/tuples");
-                    Runtime.getRuntime().exec("chmod 666 /tmp/lwang3/linda/" + hostName + "/tuples/original.txt");
-                    Runtime.getRuntime().exec("chmod 666 /tmp/lwang3/linda/" + hostName + "/tuples/backup.txt");
                     dp.emptyFile(filePath + "nets.txt");
                     dp.emptyFile(filePath + "tuples/original.txt");
                     hm.initBackup(filePath, hostName);
@@ -239,17 +236,21 @@ public class P2 {
 
 
             // check if the new hosts reachable
+
             needACK = hm.checkNewHost(hostList,ip,port);
+
+
             if (needACK == -1) {
                 return;
             }
             try {
                 System.out.println("Checking the hostname of new added hosts...");
-                Thread.currentThread().sleep(2000);
+                Thread.currentThread().sleep(1000);
             } catch (InterruptedException e) {
                 System.out.println(e);
             }
             if (needACK != 0) {
+                System.out.println("cur need ack = " + needACK);
                 System.out.println(errorMessage);
                 System.out.println("Try again...");
                 return;
@@ -348,7 +349,7 @@ public class P2 {
             System.out.println("Local original tuples have be relocated!");
 
             try {
-                Thread.currentThread().sleep(3000);
+                Thread.currentThread().sleep(2000);
             } catch (InterruptedException e) {
                 System.out.println(e);
             }
@@ -472,7 +473,7 @@ public class P2 {
                         search.removeTuple("(" + res + ")", filePath + "tuples/original.txt");
                         // send to backup to remove this tuple as well
                         int backup = (ms.searchIndex(hostName, addressBook) + 1) % addressBook.size();
-                        ms.simpleSend("bacrem (" + res + ")", addressBook.get(backup).hostName, addressBook);
+                        ms.simpleSend("bacrem (" + hostToGet + "->" + res + ")", addressBook.get(backup).hostName, addressBook);
                         System.out.println("Remove the original tuple (" + content + ") after offering tuple for \"in\" command.");
                     }
 
@@ -490,12 +491,12 @@ public class P2 {
                     }
 
                     if (command.substring(0, 2).equals("in")) {
-                        ms.simpleSend("orirem (" + content + ")", whoHas, addressBook);
+                        ms.simpleSend("orirem (" + hostToGet + "->" + content + ")", whoHas, addressBook);
                         slotTable[hostToGet].tupleSaved = false;
                         bc.broadcast("sl0" + hostToGet, addressBook, hostName);
                         // send to backup to remove this tuple as well
                         int backup = (ms.searchIndex(whoHas, addressBook) + 1) % addressBook.size();
-                        ms.simpleSend("bacrem (" + content + ")", addressBook.get(backup).hostName, addressBook);
+                        ms.simpleSend("bacrem (" + hostToGet + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
                     }
 
                     System.out.println("get tuple (" + content + ") on " + whoHas);
@@ -517,11 +518,11 @@ public class P2 {
                             slotTable[hostToGet].tupleSaved = false;
                             bc.broadcast("sl0" + hostToGet, addressBook, hostName);
 
-                            search.removeTuple("(" + res + ")", filePath);
+                            search.removeTuple("(" + hostToGet + "->" + res + ")", filePath);
 
                             // send to backup to remove this tuple as well
                             int backup = (ms.searchIndex(hostName, addressBook) + 1) % addressBook.size();
-                            ms.simpleSend("bacrem (" + res + ")", addressBook.get(backup).hostName, addressBook);
+                            ms.simpleSend("bacrem (" + hostToGet + "->" + res + ")", addressBook.get(backup).hostName, addressBook);
 
                             System.out.println("Locally remove the tuple (" + res.split("->")[1] + ") after offering tuple for \"in\" command.");
                         }
@@ -542,15 +543,24 @@ public class P2 {
                     int backup = (ms.searchIndex(awsName, addressBook) + 1) % addressBook.size();
                     ms.simpleSend("bacrem (" + aws + ")", addressBook.get(backup).hostName, addressBook);
                 }
-
-                int hostToGet = dp.md5sum(aws, totalSlot);
+                String curTuple = aws.split("->")[1];
+                int hostToGet = dp.md5sum(curTuple, totalSlot);
                 slotTable[hostToGet].tupleSaved = false;
                 bc.broadcast("sl0" + hostToGet, addressBook, hostName);
 
-                System.out.println("get tuple (" + aws + ") on " + awsName);
+                System.out.println("get tuple (" + curTuple + ") on " + awsName);
             }
 
         } else if (command.substring(0, 3).equals("out")) {
+
+            // TODO: remove
+            for (Slot s: slotTable) {
+                System.out.println(s.hostBelong);
+            }
+
+            // TODO: remove
+
+
             String content = command.substring(3, command.length());
             content = content.replaceAll("\\s*\\(", "(");
             if (content.charAt(0) != '(' || content.charAt(content.length() - 1) != ')') {
@@ -570,7 +580,9 @@ public class P2 {
             for (String each: sa) {
                 sb.append(each);
             }
+            System.out.println("plain tuple: " + sb.toString());
             int hostToPut = dp.md5sum(sb.toString(), totalSlot);
+            System.out.println("slot # to put = " + hostToPut);
             String whoHas = slotTable[hostToPut].hostBelong;
             slotTable[hostToPut].tupleSaved = true;
             bc.broadcast("sl1" + hostToPut, addressBook, hostName);
@@ -584,7 +596,8 @@ public class P2 {
 
             // send to backup to add this tuple as well
             int backup = (ms.searchIndex(whoHas, addressBook) + 1) % addressBook.size();
-            ms.simpleSend("bacsav(" + hostToPut + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
+            System.out.println("hostToPut: " + hostToPut);
+            ms.simpleSend("bacsav" + whoHas + "::(" + hostToPut + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
 
         } else {
             System.out.println("Invalid Command! Re-enter...");
@@ -603,6 +616,7 @@ public class P2 {
             errorMessage = "Wrong host name for " + infor[2] + ": " + infor[3] + ". Should be " + infor[1];
 
         } else if (message.substring(0, 3).equals("ack")) { // send back confirm message for correct host name
+            System.out.println("Ack received!");
             needACK --;
 
         } else if (message.substring(0, 3).equals("baa")) { // send tuples for backup
@@ -611,8 +625,11 @@ public class P2 {
             ms.simpleSend("fla" + hostName + "::" + tuples, backup.hostName, addressBook);
 
         } else if (message.substring(0, 3).equals("onn")) { // sender is back alive now
-            String hostName = message.substring(3, message.length());
-            addressBook.get(ms.searchIndex(hostName, addressBook)).ifAlive = true;
+            message = message.substring(3, message.length());
+            String[] infor = message.split(":");
+            int i = ms.searchIndex(infor[0], addressBook);
+            addressBook.get(i).port = Integer.parseInt(infor[1]);
+            addressBook.get(i).ifAlive = true;
 
         } else if (message.substring(0, 3).equals("sl1")) { // update the slot table
             int index = Integer.parseInt(message.substring(3, message.length()));
@@ -641,9 +658,12 @@ public class P2 {
             System.out.println("The backup tuples in current host have been synced!");
 
         } else if (message.substring(0, 3).equals("adb")) { // receive the address book from others, check if contain self
-
             String content = message.substring(3, message.length());
             String[] hostList = content.split("\\)");
+
+            System.out.println("received back sent address book");
+
+            ifReboot = false;
 
             for (String each: hostList) {
                 each = each.substring(1, each.length());
@@ -652,6 +672,8 @@ public class P2 {
                 String curIP = infor[1];
                 if (curName.equals(hostName) && curIP.equals(ip)) {
                     ifReboot = true;
+                    System.out.println("detect myself in the latest address book!");
+                    break;
                 }
             }
 
@@ -668,6 +690,7 @@ public class P2 {
                 }
                 // sort address book
                 addressBook.sort(Address::compareTo);
+                System.out.println("latest address book length = " + addressBook.size());
 
                 hm.flushHostNet(addressBook, filePath, hostName);
                 System.out.println("Net file has been synced!");
@@ -677,7 +700,7 @@ public class P2 {
             } else {
                 lock = false;
             }
-
+            System.out.println("reboot end");
 
         } else if (message.substring(0, 3).equals("stb")) {  // sync the slot table after rebooted
 
@@ -686,8 +709,9 @@ public class P2 {
 
             for (int i = 0; i < slotTable.length; i ++) {
                 String each = slots[i];
+                System.out.println("cur slot to sync: " + each);
                 each = each.substring(1, each.length());
-                String[] infor = each.split("\\s+");
+                String[] infor = each.split(","); // TODO ??????
                 String curName  = infor[0];
                 boolean ifSaved = Boolean.parseBoolean(infor[1]);
                 slotTable[i].hostBelong = curName;
@@ -705,19 +729,26 @@ public class P2 {
             for (int i = 0; i < slotTable.length; i ++) {
                 String each = slots[i];
                 each = each.substring(1, each.length());
-                String[] infor = each.split("\\s+");
+                String[] infor = each.split(",");
                 boolean ifSaved = Boolean.parseBoolean(infor[1]);
                 slotTable[i].tupleSaved = slotTable[i].tupleSaved || ifSaved;
             }
 
-        } else if (message.substring(0, 3).equals("reb")) { // be required for updated address book
+        } else if (message.substring(0, 3).equals("reb")) { // be required for the latest address book
+            System.out.println(message);
+            // get new port number
+            message = message.substring(3, message.length());
+            String[] infor = message.split(":");
+            int i = ms.searchIndex(infor[0], addressBook);
+            addressBook.get(i).port = Integer.parseInt(infor[1]);
 
             // send back the address book
-            StringBuilder sb = new StringBuilder("adb(" + hostName + " " + ip + " " + port + " true)");
+            StringBuilder sb = new StringBuilder("adb");
             for (Address each : addressBook) {
                 sb.append("(" + each.hostName + " " + each.ip + " " + each.port + " " + each.ifAlive + ")");
             }
-            ms.simpleSend(sb.toString(), message.substring(3, message.length()), addressBook);
+            System.out.println("I send this to reboot host: " + sb.toString());
+            ms.directSend(sb.toString(), infor[0], Integer.parseInt(infor[1]));
 
         } else if (message.substring(0, 3).equals("re2") || message.substring(0, 3).equals("stn")) { // be required for updated slot table
             // send back the slot table
@@ -729,7 +760,7 @@ public class P2 {
                 st = new StringBuilder("stc");
             }
             for (Slot each: slotTable) {
-                st.append("(" + each.hostBelong + " " + each.tupleSaved + ")");
+                st.append("(" + each.hostBelong + "," + each.tupleSaved + ")");
             }
 
             ms.simpleSend(st.toString(), message.substring(3, message.length()), addressBook);
@@ -748,7 +779,6 @@ public class P2 {
                 set.add(each);
                 if (each.equals(hostName)) {
                     self = true;
-                    break;
                 }
             }
 
@@ -778,8 +808,10 @@ public class P2 {
             String[] infor = message.split("\\s+");
             String nameConfirm = infor[1];
             if (!nameConfirm.equals(hostName)) {
+                System.out.println("received a wrong hostname: " + nameConfirm);
                 ms.directSend("wrong " + hostName + " " + ip + " " + port, infor[2], Integer.parseInt(infor[3]));
             } else {
+                System.out.println("right host name! Sent ack.");
                 ms.directSend("ack", infor[2], Integer.parseInt(infor[3]));
             }
 
@@ -868,9 +900,10 @@ public class P2 {
             System.out.println("Save tuples " + content + " in local backup due to deleting/adding host.");
 
         } else if (message.substring(0, 3).equals("ori") || message.substring(0, 3).equals("bac")) {  // detect if operation on original or backup
-
+            System.out.println(message);
             String accessFile;
-            if (message.substring(0, 3).equals("ori")) {
+            String title = message.substring(0, 3);
+            if (title.equals("ori")) {
                 accessFile = filePath + "tuples/original.txt"; // operation on original file
             } else {
                 accessFile = filePath + "tuples/backup.txt"; // operation on backup file
@@ -882,8 +915,8 @@ public class P2 {
                 String content = message.substring(4 + res.length(), message.length());
                 String aws = search.searchInLocal(content, accessFile);
                 if (aws != null) {
-                    ms.send("aws " + hostName + " " + aws, res, addressBook);
-                    System.out.println("Try to offer tuple (" + aws + ") to " + res);
+                    ms.simpleSend("aws " + hostName + " " + aws, res, addressBook);
+                    System.out.println("Try to offer tuple (" + aws.split("->")[1] + ") to " + res);
                 }
 
             } else if (message.substring(0, 3).equals("rem")) { // delete this tuple
@@ -901,8 +934,15 @@ public class P2 {
             } else if (message.substring(0, 3).equals("sav")) { // save the tuple to backup / original file
                 System.out.println(message);
                 String content = message.substring(3, message.length());
-                search.addNewTuple(content, accessFile);
-                System.out.println("Save tuple (" + content.substring(1, content.length() - 1).split("->")[1] + ") in " + accessFile);
+                System.out.println(title);
+                if (title.equals("ori")) {
+                    search.addNewTuple(content, accessFile);
+                } else {
+                    System.out.println("using flush method");
+                    search.flush(content, accessFile);
+                }
+
+                System.out.println("Save tuple " + content + " in " + accessFile);
 
             } else {
                 System.out.println("Received a unpredicted message: " + message);

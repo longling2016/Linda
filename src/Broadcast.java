@@ -35,8 +35,10 @@ public class Broadcast {
         try {
             BufferedReader br = new BufferedReader(new FileReader(filePath + "nets.txt"));
             String line;
-
+            System.out.println("file opened!");
             while ((line = br.readLine()) != null) {
+                System.out.println("cur line = " + line);
+
                 String[] curline = line.split("\\s*,\\s*");
                 String ip = curline[1];
                 int port = Integer.parseInt(curline[2]);
@@ -50,6 +52,7 @@ public class Broadcast {
                     out.close();
                     s.close();
                     ifSent = true;
+                    System.out.println("message has sent to " + line);
                     break;
                 } catch (IOException e) {
                     // current host may have been deleted. Continue trying next host.
