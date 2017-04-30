@@ -174,15 +174,7 @@ public class DataProcess {
         return null;
     }
 
-    public void emptyFile (String filePath) {
-        try {
-            PrintWriter writer = new PrintWriter(filePath);
-            writer.print("");
-            writer.close();
-        } catch (IOException e) {
-            System.out.println(e);
-        }
-    }
+
 
 
 //    public void updateSlotTable (String tuples, Slot[] slotTable) {

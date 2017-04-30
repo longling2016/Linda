@@ -69,7 +69,7 @@ public class Search {
         } catch (IOException e) {
             System.out.println(e);
         }
-        return null;
+        return "";
     }
 
     public void removeTuple(String tuple, String filePath) {
@@ -102,7 +102,25 @@ public class Search {
         } catch (IOException e) {
             System.out.println(e);
         }
+        System.out.println("remove tuple " + tuple + " from " + filePath);
     }
+
+    public boolean ifSlotEmpty (String slotNum, String filePath) {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(filePath));
+            String currentLine;
+            while ((currentLine = reader.readLine()) != null) {
+                if (currentLine.split("->")[0].equals(slotNum)) {
+                    return true;
+                }
+            }
+            reader.close();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        return false;
+    }
+
 
     public void addNewTuple(String tuple, String filePath) {
         try {
@@ -205,17 +223,34 @@ public class Search {
 
     public void sync(String content, String filePath) {
         try {
+            if (content.equals("")) {
+                emptyFile(filePath);
+                return;
+            }
             content = content.substring(1, content.length() - 1);
             String[] tuples = content.split("\\)\\(");
             FileWriter fw = new FileWriter(filePath);
             BufferedWriter bw = new BufferedWriter(fw);
             PrintWriter out = new PrintWriter(bw);
+//            if (tuples.length == 0) {
+//                out.println("");
+//            }
             for (String each : tuples) {
                 out.println(each);
             }
             out.close();
             bw.close();
             fw.close();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
+    public void emptyFile (String filePath) {
+        try {
+            PrintWriter writer = new PrintWriter(filePath);
+            writer.print("");
+            writer.close();
         } catch (IOException e) {
             System.out.println(e);
         }

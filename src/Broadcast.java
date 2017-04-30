@@ -30,6 +30,19 @@ public class Broadcast {
         }
     }
 
+    public void broadcastForward (String message, List<Address> addressBook, String localHost) {
+        MessageSender ms = new MessageSender();
+
+        for (int i = 0; i < addressBook.size(); i++) {
+            Address cur = addressBook.get(i);
+            if (cur.hostName.equals(localHost)) {
+                continue;
+            }
+
+            ms.send(message, cur.hostName, addressBook);
+        }
+    }
+
     public boolean rebootCast (String message, String filePath) {
         boolean ifSent = false;
         try {
@@ -58,7 +71,7 @@ public class Broadcast {
                     // current host may have been deleted. Continue trying next host.
                 }
             }
-                br.close();
+            br.close();
 
         } catch (IOException e) {
             System.out.println(e);

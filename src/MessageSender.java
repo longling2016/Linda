@@ -56,7 +56,7 @@ public class MessageSender {
         if (addressBook.get(i).ifAlive) { // receiver is alive
             message = "ori" + message;
         } else {
-            message = "bup" + message;
+            message = "bac" + message;
             i = (i + 1) % addressBook.size();
         }
 
@@ -71,7 +71,8 @@ public class MessageSender {
         } catch (IOException e) {
             addressBook.get(i).ifAlive = false;
             System.out.println("Host " + sendToWho + " is down for now. \nForward the message to its backup.");
-            message = message.replace("ori", "bup");
+            message = message.replace("ori", "bac");
+            System.out.println("changd receiver: " + message);
             i = (i + 1) % addressBook.size();
             simpleSend(message, addressBook.get(i).hostName, addressBook);
         }
