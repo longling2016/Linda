@@ -1,7 +1,6 @@
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 
 /**
  * Created by longlingwang on 4/8/17.
@@ -73,7 +72,6 @@ public class Search {
     }
 
     public void removeTuple(String tuple, String filePath) {
-        System.out.println("remove tuple: " + tuple);
         File inputFile = new File(filePath);
         String folder = inputFile.getParent();
         File tempFile = new File(folder + "/tempFile.txt");
@@ -102,7 +100,6 @@ public class Search {
         } catch (IOException e) {
             System.out.println(e);
         }
-        System.out.println("remove tuple " + tuple + " from " + filePath);
     }
 
     public boolean ifSlotEmpty (String slotNum, String filePath) {
@@ -143,24 +140,18 @@ public class Search {
     public void flush(String content, String filePath) {
         try {
             String[] infor = content.split("::");
-            System.out.println(content);
             String backupForWho = infor[0];
 
             BufferedReader br = new BufferedReader(new FileReader(filePath));
             String line = br.readLine();
             br.close();
 
-            System.out.println("cur backup host: " + line);
-            System.out.println("new backup host: " + backupForWho);
-
             FileWriter fw;
             boolean flush = false;
             if (line.equals(backupForWho)) {
                 fw = new FileWriter(filePath, true);
-                System.out.println("append");
             } else {
                 fw = new FileWriter(filePath);
-                System.out.println("flush");
                 flush = true;
             }
             BufferedWriter bw = new BufferedWriter(fw);
@@ -193,7 +184,6 @@ public class Search {
     public void flushBackup(String content, String filePath) {
         try {
             String[] infor = content.split("::");
-            System.out.println(content);
 
             String backupForWho = infor[0];
             FileWriter fw = new FileWriter(filePath);
@@ -232,9 +222,6 @@ public class Search {
             FileWriter fw = new FileWriter(filePath);
             BufferedWriter bw = new BufferedWriter(fw);
             PrintWriter out = new PrintWriter(bw);
-//            if (tuples.length == 0) {
-//                out.println("");
-//            }
             for (String each : tuples) {
                 out.println(each);
             }

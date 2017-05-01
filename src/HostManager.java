@@ -1,5 +1,3 @@
-import com.sun.org.apache.xml.internal.utils.Hashtree2Node;
-
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -18,7 +16,6 @@ public class HostManager {
         String[] hosts = hostList.split("\\)");
 
         for (String each : hosts) {
-            System.out.println(each);
             String host = each.substring(1, each.length());
             String[] hostInfor = host.split(",");
 
@@ -28,12 +25,10 @@ public class HostManager {
 
             try {
                 //try to connect to check the correctness of IP and port
-                System.out.println("send to: " + ip + ", " + port);
                 Socket s =new Socket();
                 s.connect(new InetSocketAddress( ip, Integer.parseInt(port)),500);
                 DataOutputStream out = new DataOutputStream(s.getOutputStream());
                 out.writeUTF("confirm " + hostName + " " + localIP + " " + localPort);
-                System.out.println("Message sent!" + hostName);
                 out.flush();
                 out.close();
                 s.close();
@@ -43,7 +38,6 @@ public class HostManager {
             }
 
         }
-        System.out.println("# of new host: " + hosts.length);
         return hosts.length;
     }
 

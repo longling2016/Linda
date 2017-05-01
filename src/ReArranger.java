@@ -1,7 +1,4 @@
-import com.sun.tools.corba.se.idl.InterfaceGen;
-
 import java.io.*;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,17 +10,6 @@ import java.util.List;
 public class ReArranger {
     public void reArrangeAdd(String filePath, Integer totalSlot, String localHost, Slot[] preTable,
                              Slot[] curTable, ArrayList<Address> preAddressBook, List<Address> curAddressBook) {
-
-//        // TODO delete
-//        for (Slot each: preTable) {
-//            System.out.println( "pre (" + each.hostBelong + ", " + each.tupleSaved + ")");
-//        }
-//
-//        // TODO delete
-//        for (Slot each: curTable) {
-//            System.out.println( "cur (" + each.hostBelong + ", " + each.tupleSaved + ")");
-//        }
-
 
         int pre = preAddressBook.size();
         int cur = curAddressBook.size();
@@ -45,9 +31,6 @@ public class ReArranger {
         }
 
         int givePerNew = (totalSlot / pre - totalSlot / cur) / difference.size();
-        System.out.println("give per new: " + givePerNew);
-
-        System.out.println("difference #: " + difference.size());
 
         for (Address differ: difference) {
 
@@ -101,19 +84,12 @@ public class ReArranger {
                 continue;
             }
 
-            System.out.println("tuples to give away: " + tuplesToTans);
-
             // send to original
             ms.simpleSend("orisav" + tuplesToTans, eachNew, curAddressBook);
 
             // delete the tuple from local
             s.removeTuple(tuplesToTans, filePath + "tuples/original.txt");
 
-        }
-
-        // TODO delete
-        for (Slot each: curTable) {
-            System.out.println( "(" + each.hostBelong + ", " + each.tupleSaved + ")");
         }
 
     }
@@ -149,19 +125,12 @@ public class ReArranger {
 
             String tuplesToTans = getTuples(slotToTans, filePath + "tuples/original.txt");
 
-            System.out.println(eachNew);
-
             // send to original
             ms.simpleSend("orisav" + tuplesToTans, eachNew, addressBook);
 
             // delete the tuple from local
             s.removeTuple(tuplesToTans, filePath + "tuples/original.txt");
 
-        }
-
-        // TODO delete
-        for (Slot each: cur) {
-            System.out.println( "OB (" + each.hostBelong + ", " + each.tupleSaved + ")");
         }
 
     }
@@ -217,8 +186,6 @@ public class ReArranger {
             // send to backup
             Address curBackup = addressBook.get((each + 1) % addressBook.size());
             ms.simpleSend("bacsav" + receiver.hostName + "::" + tuplesToTans, curBackup.hostName, addressBook);
-            System.out.println("give tuples for receiver's backup host: " + curBackup.hostName + " :: " + tuplesToTans);
-
         }
 
 
@@ -237,12 +204,8 @@ public class ReArranger {
         } catch (IOException e) {
             System.out.println(e);
         }
-        System.out.println(backupWho);
-
-        System.out.println("delete list: " + deletedList.toString());
 
         if (!deletedList.contains(backupWho)) {
-            System.out.println(backupWho);
             int newBackup = (ms.searchIndex(backupWho, addressBook) + 1) % addressBook.size();
             ms.simpleSend("bacsav" + backupWho + "::" + sb.toString(), addressBook.get(newBackup).hostName, addressBook);
         }
@@ -257,13 +220,11 @@ public class ReArranger {
             BufferedReader br = new BufferedReader(new FileReader(filePath));
             String line;
             while ((line = br.readLine()) != null) {
-                System.out.println("curline: " + line);
                 String[] curline = line.split("->");
                 if (curline.length < 2) {
                     continue;
                 }
                 int curSlot = Integer.parseInt(curline[0]);
-                System.out.println("cur slot = " + curSlot);
                 if (slotToTans.contains(curSlot)) {
                     sb.append("(" + line + ")");
                 }
@@ -275,15 +236,5 @@ public class ReArranger {
         }
         return null;
     }
-
-    public boolean ifEmpty(HashMap<String, Integer> hm) {
-        for (Integer each: hm.values()) {
-            if (each > 0) {
-                return false;
-            }
-        }
-        return true;
-    }
-
 
 }

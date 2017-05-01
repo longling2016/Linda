@@ -1,11 +1,9 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
 
 /**
  * Created by longlingwang on 4/8/17.
@@ -15,18 +13,18 @@ public class DataProcess {
         String s = a[0];
         boolean[] result = new boolean[2];
         if (s.length() == 0) {
-            System.out.println("No data entered!");
+            System.out.println("No data entered! Please re-enter...");
             return result;
         }
 
         // remove unnecessary white space  data if any
         int i = 0;
         while (i < s.length() - 1 && s.charAt(i) == ' ') {
-            i ++;
+            i++;
         }
         int j = s.length() - 1;
         while (j >= 0 && s.charAt(j) == ' ') {
-            j --;
+            j--;
         }
 
         if (i > j) {
@@ -40,7 +38,7 @@ public class DataProcess {
             return result;
         }
 
-        for (int p = 0; p < tuple.length; p ++) {
+        for (int p = 0; p < tuple.length; p++) {
             String each = tuple[p];
             if (each.length() == 0) {
                 return result;
@@ -64,6 +62,16 @@ public class DataProcess {
                 if (length < 6) {
                     return result;
                 }
+
+                String[] infor = each.split(":");
+                if (infor.length < 2) {
+                    System.out.println("Please add \":\" for searching a tuple with variable.");
+                    return result;
+                }
+                if (infor[0].length() < 2) {
+                    System.out.println("Please add a variable name before \":\".");
+                    return result;
+                }
                 if (length == 6) {
                     if (each.substring(length - 4, length).equals(":int")) {
                         continue;
@@ -81,7 +89,7 @@ public class DataProcess {
         }
         result[0] = true;
         StringBuilder sb = new StringBuilder();
-        for (int p = 0; p < tuple.length - 1; p ++) {
+        for (int p = 0; p < tuple.length - 1; p++) {
             sb.append(tuple[p] + ", ");
         }
         sb.append(tuple[tuple.length - 1]);
@@ -102,7 +110,7 @@ public class DataProcess {
 
     public boolean isFloat(String s) {
         boolean b = false;
-        for (int i = 0; i < s.length(); i ++) {
+        for (int i = 0; i < s.length(); i++) {
             if (s.charAt(i) == '.') {
                 b = true;
                 break;
@@ -121,9 +129,8 @@ public class DataProcess {
         return true;
     }
 
-    public int md5sum(String s, int numOfHost) {
-        if (numOfHost == 0) {
-            System.out.println("No other host has been added!");
+    public int md5sum(String s, int numSlot) {
+        if (numSlot == 0) {
             return 0;
         }
         try {
@@ -132,7 +139,7 @@ public class DataProcess {
             m.update(s.getBytes());
             byte[] digest = m.digest();
             BigInteger afterHash = new BigInteger(1, digest);
-            BigInteger numToMod = BigInteger.valueOf(numOfHost);
+            BigInteger numToMod = BigInteger.valueOf(numSlot);
             BigInteger res = afterHash.mod(numToMod);
             return res.intValue();
 
@@ -142,7 +149,7 @@ public class DataProcess {
         }
     }
 
-    public String getBackup (String filePath) {
+    public String getBackup(String filePath) {
         StringBuilder sb = new StringBuilder();
         try {
             BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/backup.txt"));
@@ -158,7 +165,7 @@ public class DataProcess {
         return null;
     }
 
-    public String getOriginal (String filePath) {
+    public String getOriginal(String filePath) {
         StringBuilder sb = new StringBuilder();
         try {
             BufferedReader br = new BufferedReader(new FileReader(filePath + "tuples/original.txt"));
@@ -173,15 +180,4 @@ public class DataProcess {
         }
         return null;
     }
-
-
-
-
-//    public void updateSlotTable (String tuples, Slot[] slotTable) {
-//        String[] tupleList = tuples.substring(1, tuples.length() - 1).split("\\)\\(");
-//        for (String each : tupleList) {
-//            int slotIndex = Integer.parseInt(each.split("->")[0]);
-//            slotTable[slotIndex].tupleSaved = false;
-//        }
-//    }
 }
