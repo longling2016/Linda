@@ -430,64 +430,56 @@ public class P2 {
             if (!validity[1]) { // data doesn't have variable
                 String[] sa = content.split("\\s*,\\s*");
                 StringBuilder sb = new StringBuilder();
-                for (String each : sa) {
+                for (String each: sa) {
                     sb.append(each);
                 }
-                String tuple = sb.toString();
+                int hostToGet = dp.md5sum(sb.toString(), totalSlot);
+                String whoHas = slotTable[hostToGet].hostBelong;
                 String res = "";
+                System.out.println("Waiting until the data can be gotten...");
                 while (res.equals("")) {
-                    int hostToGet = dp.md5sum(tuple, totalSlot);
-                    String whoHas = slotTable[hostToGet].hostBelong;
                     if (whoHas.equals(hostName)) {
                         res = search.searchInLocal(content, filePath + "tuples/original.txt");
-                        if (res.equals("")) { // data has NOT been written in local
-                            System.out.println("Waiting until the data can be gotten in local ...");
+                        if (!res.equals("")) {
+
+                            System.out.println("get tuple (" + content + ") on " + hostName);
+
+                            if (command.substring(0, 2).equals("in")) {  // delete the tuple
+                                search.removeTuple("(" + res + ")", filePath + "tuples/original.txt");
+                                if (!search.ifSlotEmpty(res.split("->")[0], filePath + "tuples/original.txt")) {
+                                    slotTable[hostToGet].tupleSaved = false;
+                                    bc.broadcast("sl0" + hostToGet, addressBook, hostName);
+                                }
+                                // send to backup to remove this tuple as well
+                                int backup = (ms.searchIndex(hostName, addressBook) + 1) % addressBook.size();
+                                ms.simpleSend("bacrem (" + hostToGet + "->" + res + ")", addressBook.get(backup).hostName, addressBook);
+                                System.out.println("Remove the original tuple (" + content + ") after offering tuple for \"in\" command.");
+                                return;
+                            }
                         }
-                        try {
-                            Thread.currentThread().sleep(500);
-                            res = search.searchInLocal(content, filePath + "tuples/original.txt");
-                        } catch (InterruptedException e) {
-                            System.out.println(e);
+
+                    } else { // data is not in local
+                        lock = true;
+                        while (lock) {
+                            try {
+                                whoHas = slotTable[hostToGet].hostBelong;
+                                ms.send(command.substring(0, 2) + " " + hostName + " " + content, whoHas, addressBook);
+                                Thread.currentThread().sleep(500);
+                            } catch (InterruptedException e) {
+                                System.out.println(e);
+                            }
                         }
-                    }
 
-
-                    System.out.println("get tuple (" + content + ") on " + hostName);
-
-                    if (command.substring(0, 2).equals("in")) {  // delete the tuple
-                        search.removeTuple("(" + res + ")", filePath + "tuples/original.txt");
-                        if (!search.ifSlotEmpty(res.split("->")[0], filePath + "tuples/original.txt")) {
-                            slotTable[hostToGet].tupleSaved = false;
-                            bc.broadcast("sl0" + hostToGet, addressBook, hostName);
+                        if (command.substring(0, 2).equals("in")) {
+                            ms.simpleSend("orirem (" + hostToGet + "->" + content + ")", whoHas, addressBook);
+                            // send to backup to remove this tuple as well
+                            int backup = (ms.searchIndex(whoHas, addressBook) + 1) % addressBook.size();
+                            ms.simpleSend("bacrem (" + hostToGet + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
                         }
-                        // send to backup to remove this tuple as well
-                        int backup = (ms.searchIndex(hostName, addressBook) + 1) % addressBook.size();
-                        ms.simpleSend("bacrem (" + hostToGet + "->" + res + ")", addressBook.get(backup).hostName, addressBook);
-                        System.out.println("Remove the original tuple (" + content + ") after offering tuple for \"in\" command.");
-                    }
 
-                }
-            } else { // data is not in local
-                    System.out.println("need to get tuple (" + content + ") on " + whoHas);
-                    System.out.println("Waiting until the data can be gotten ...");
-                    lock = true;
-                    while (lock) {
-                        try {
-                            ms.send(command.substring(0, 2) + " " + hostName + " " + content, whoHas, addressBook);
-                            Thread.currentThread().sleep(500);
-                        } catch (InterruptedException e) {
-                            System.out.println(e);
-                        }
+                        System.out.println("get tuple (" + content + ") on " + whoHas);
+                        return;
                     }
-
-                    if (command.substring(0, 2).equals("in")) {
-                        ms.simpleSend("orirem (" + hostToGet + "->" + content + ")", whoHas, addressBook);
-                        // send to backup to remove this tuple as well
-                        int backup = (ms.searchIndex(whoHas, addressBook) + 1) % addressBook.size();
-                        ms.simpleSend("bacrem (" + hostToGet + "->" + content + ")", addressBook.get(backup).hostName, addressBook);
-                    }
-
-                    System.out.println("get tuple (" + content + ") on " + whoHas);
                 }
 
             } else { // data has variable in it
@@ -858,23 +850,22 @@ public class P2 {
             ra.reArrangeOB(filePath, hostName, backup, slotTable, addressBook);
 
             System.out.println("Local tuples and backup have be relocated!");
+            System.out.print(hostName +  " linda> ");
+
 
         } else if (message.substring(0, 3).equals("flu")) { // save the tuple to backup with checking
             String content = message.substring(4, message.length());
             search.flush(content, filePath + "tuples/backup.txt");
-            System.out.println("Save tuples " + content + " in local backup due to deleting/adding host.");
-            System.out.println(hostName + " linda> ");
 
         } else if (message.substring(0, 3).equals("fla")) { // save the tuple to backup by overwriting all
             String content = message.substring(3, message.length());
             search.flushBackup(content, filePath + "tuples/backup.txt");
-            System.out.println("Save tuples " + content + " in local backup due to deleting/adding host.");
 
         } else if (message.substring(0, 3).equals("out")) {
             String content = message.substring(3, message.length());
             search.addNewTuple("(" + content + ")", filePath + "tuples/original.txt");
             System.out.println("Save tuple (" + content.split("->")[1] + ") in local.");
-            System.out.println(hostName +  " linda> ");
+            System.out.print(hostName +  " linda> ");
 
         } else if (message.substring(0, 3).equals("ori") || message.substring(0, 3).equals("bac")) {  // detect if operation on original or backup
             String accessFile;
@@ -899,9 +890,10 @@ public class P2 {
                 } else {
                     reply = addressBook.get(Math.abs(ms.searchIndex(hostName, addressBook) + addressBook.size() - 1) % addressBook.size()).hostName;
                 }
-                    ms.simpleSend("aws " + reply + " " + aws, res, addressBook);
-                    System.out.println("Try to offer tuple (" + aws.split("->")[1] + ") to " + res);
-                System.out.println(hostName +  " linda> ");
+                ms.simpleSend("aws " + reply + " " + aws, res, addressBook);
+                System.out.println("Provide tuple (" + aws.split("->")[1] + ") to " + res);
+                System.out.print(hostName +  " linda> ");
+
 
 
             } else if (message.substring(0, 3).equals("rem")) { // delete this tuple
@@ -913,7 +905,7 @@ public class P2 {
                     bc.broadcast("sl0" + infor[0], addressBook, hostName);
                 }
                 System.out.println("Remove the tuple " + infor[1] + " after offering tuple for \"in\" command from " + accessFile);
-                System.out.println(hostName +  " linda> ");
+                System.out.print(hostName +  " linda> ");
 
             } else if (message.substring(0, 3).equals("sav")) { // save the tuple to backup / original file
                 String content = message.substring(3, message.length());
